@@ -4,16 +4,17 @@ var csvParse = require('csv-parse');
 var fs = require('fs');
 var process = require('process');
 var q = require('promised-io/promise');
+var path = require('path');
 
 function extractSeasonYears(fileName) {
-  var parts = fileName.split('_');
+  var parts = path.basename(fileName).split('_');
   var years = parts[parts.length - 1].split('-');
   years[1] = years[1].slice(0, 4);
   return years;
 }
 
 function extractLeagueName(fileName) {
-  return fileName.split('_')[1];
+  return path.basename(fileName).split('_')[1];
 }
 
 function fromFile(fileName) {
