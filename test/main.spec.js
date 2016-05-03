@@ -19,6 +19,8 @@ describe('Parser', function () {
             assert(match.get('homeTeam') instanceof TeamModel);
             assert(match.get('awayTeam') instanceof TeamModel);
             assert(match.get('season') instanceof SeasonModel);
+            assert.equal(match.get('season').get('yearStart'), 1993);
+            assert.equal(match.get('season').get('yearEnd'), 1994);
             assert(match.get('league') instanceof LeagueModel);
             assert(match.get('matchId') != null);
           })
