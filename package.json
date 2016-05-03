@@ -10,7 +10,9 @@
   "author": "Ovidiu Bute <ovidiu.bute@gmail.com> (http://ovidiubute.com)",
   "license": "ISC",
   "dependencies": {
-    "csv-parse": "1.0.4",
+    "csv": "^0.4.6",
+    "fcstats-models": "github:ovidiubute/fcstats-models",
+    "moment": "^2.13.0",
     "promised-io": "^0.3.5"
   },
   "devDependencies": {

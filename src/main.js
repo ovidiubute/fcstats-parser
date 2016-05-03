@@ -1,10 +1,13 @@
 "use strict";
 
-var csvParse = require('csv-parse');
+var csv = require('csv');
 var fs = require('fs');
 var process = require('process');
 var q = require('promised-io/promise');
 var path = require('path');
+var moment = require('moment');
+var models = require('fcstats-models');
+var util = require('util');
 
 function extractSeasonYears(fileName) {
   var parts = path.basename(fileName).split('_');
@@ -17,49 +20,111 @@ function extractLeagueName(fileName) {
   return path.basename(fileName).split('_')[1];
 }
 
-function fromFile(fileName) {
-  // Create the parser
-  var csvParser = csvParse({skip_empty_lines: true, trim: true, auto_parse: true});
-  var record;
-
-  // Use the writable stream api
-  var buffer = [];
-  csvParser.on('readable', function () {
-    while (record = csvParser.read()) {
-      // Empty rows in some files..
-      if (record[0].trim() === "") {
-        continue;
-      }
-
-      // Exclude header..
-      if (record[0] === "Div") {
-        continue;
-      }
-
-      buffer.push(record);
-    }
-  });
-
+function parseDirectory(dir) {
   var deferred = q.defer();
+  var promises = [];
 
-  // Catch any error
-  csvParser.on('error', function (err) {
+  _getFiles(dir).then((files) => {
+    return q.all(files.map((file) => {
+      return _parse(dir, file);
+    })).then((results) => {
+      deferred.resolve(results);
+    });
+  }, (err) => {
     deferred.reject(err);
   });
 
-  // When we are done, test that the parsed output matched what expected
-  csvParser.on('finish', function () {
-    deferred.resolve(buffer);
+  return deferred.promise;
+}
+
+function _getFiles(dirname) {
+  var deferred = q.defer();
+
+  fs.readdir(dirname, (err, files) => {
+    if (err) {
+      deferred.reject(err);
+    } else {
+      deferred.resolve(files);
+    }
   });
 
-  // Pipe
-  fs.createReadStream(fileName).pipe(csvParser);
+  return deferred.promise;
+}
+
+const _notEmpty = (record) => {
+  return Object.keys(record).filter((value) => {
+    return record[value] != "";
+  }).length > 0;
+}
+
+function _parse(dirname, filename) {
+  var deferred = q.defer();
+
+  let parser = csv.parse({
+    skip_empty_lines: true,
+    trim: true,
+    auto_parse: true,
+    columns: true,
+    relax_column_count: true
+  });
+  let matches = [];
+  let record;
+  let seasonStartYear = 0;
+  let leagueName = '';
+
+  parser.on('readable', () => {
+    while(record = parser.read()) {
+      if (_notEmpty(record)) {
+        let seasonYear = moment(record.Date, 'DD/MM/YY').year();
+        if (seasonStartYear == 0) {
+          seasonStartYear = seasonYear;
+        }
+        if (leagueName == '') {
+          leagueName = record.Div;
+        }
+
+        matches.push(record);
+      }
+    }
+  })
+
+  parser.on('finish', () => {
+    deferred.resolve({
+      matches: matches.map((csvMatch, index) => {
+        const momentDate = moment(csvMatch.Date, 'DD/MM/YY');
+        return new models.MatchModel({
+          matchId: util.format('match-%s-%s-%s-%s',
+            csvMatch.Div, seasonStartYear, momentDate.year(), index + 1),
+          date: momentDate.unix(),
+          league: new models.LeagueModel({name: leagueName}),
+          homeTeam: new models.TeamModel({name: csvMatch.HomeTeam}),
+          awayTeam: new models.TeamModel({name: csvMatch.AwayTeam}),
+          season: new models.SeasonModel({
+            yearStart: seasonStartYear,
+            yearEnd: seasonStartYear + 1,
+            leagueName: csvMatch.Div
+          }),
+          score: new models.ScoreModel({
+            home: csvMatch.FTHG,
+            away: csvMatch.FTAG
+          })
+        })
+      }),
+      leagueName: leagueName,
+      season: {
+        start: seasonStartYear,
+        end: seasonStartYear + 1
+      }
+    });
+  })
+
+  fs.createReadStream(path.join(dirname, filename)).pipe(parser);
 
   return deferred.promise;
 }
 
 module.exports = {
-  fromFile: fromFile,
+  parseDirectory: parseDirectory,
   extractSeasonYears: extractSeasonYears,
   extractLeagueName: extractLeagueName
 };
