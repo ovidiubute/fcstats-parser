@@ -12,18 +12,17 @@ var SeasonModel = require('fcstats-models').SeasonModel;
 describe('Parser', function () {
   describe('#parseDirectory', function () {
     it('should parse all CSVs from a given directory', function () {
-      return main.parseDirectory(path.join(process.cwd(), "/test/1993-1994")).then(function (results) {
-        results.forEach(function (result) {
-          result.matches.forEach(function (match) {
-            assert(match instanceof MatchModel);
-            assert(match.get('homeTeam') instanceof TeamModel);
-            assert(match.get('awayTeam') instanceof TeamModel);
-            assert(match.get('season') instanceof SeasonModel);
-            assert.equal(match.get('season').get('yearStart'), 1993);
-            assert.equal(match.get('season').get('yearEnd'), 1994);
-            assert(match.get('league') instanceof LeagueModel);
-            assert(match.get('matchId') != null);
-          })
+      this.timeout(5000);
+      return main.parseDirectory(path.join("test", "1993-1994")).then(function (matches) {
+        matches.forEach(function (match) {
+          assert(match instanceof MatchModel);
+          assert(match.get('homeTeam') instanceof TeamModel);
+          assert(match.get('awayTeam') instanceof TeamModel);
+          assert(match.get('season') instanceof SeasonModel);
+          assert.equal(match.get('season').get('yearStart'), 1993);
+          assert.equal(match.get('season').get('yearEnd'), 1994);
+          assert(match.get('league') instanceof LeagueModel);
+          assert(match.get('matchId') != null);
         });
       });
     });
