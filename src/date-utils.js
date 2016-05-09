@@ -3,11 +3,19 @@
 var moment = require('moment');
 
 const getYear = (date) => {
-  return moment(date, 'DD/MM/YY').year();
+  if (date.length === 8) {
+    return moment(date, 'DD/MM/YY').year();
+  } else {
+    return moment(date, 'DD/MM/YYYY').year();
+  }
 }
 
 const getUnix = (date) => {
-  return moment(date, 'DD/MM/YY').unix();
+  let pattern = 'DD/MM/YY';
+  if (date.length === 10) {
+    pattern = 'DD/MM/YYYY';
+  }
+  return moment(date, pattern).unix();
 }
 
 module.exports = {

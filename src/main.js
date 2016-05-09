@@ -59,7 +59,7 @@ function parseFile(file, parser) {
 
     const leagueName = matches[0].Div;
     const seasonStartYear = dateutils.getYear(matches[0].Date);
-    const seasonFinishYear = dateutils.getYear(matches[matches.length - 1].Date);
+    const seasonFinishYear = seasonStartYear + 1;
 
     deferred.resolve(
       matches.map((csvMatch, index) => {
